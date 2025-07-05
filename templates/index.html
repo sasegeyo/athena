@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO Gas Monitoring Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #4a90e2;
+            --secondary: #7b68ee;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --safe: #27ae60;
+            --bg-light: #faf9f6;
+            --surface-light: #ffffff;
+            --text-light: #2c3e50;
+            --border-light: #ddd;
+            --paper-shadow: 3px 3px 10px rgba(0,0,0,0.15);
+            --sketch-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        body {
+            font-family: 'Kalam', cursive;
+            background: var(--bg-light);
+            color: var(--text-light);
+            line-height: 1.5;
+            transition: all 0.4s ease;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 177, 153, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        .header {
+            background: var(--surface-light);
+            padding: 25px 20px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: var(--paper-shadow);
+            position: relative;
+            border: 2px solid var(--border-light);
+            transform: rotate(-0.5deg);
+            transition: all 0.3s ease;
+        }
+        
+        .header:hover {
+            transform: rotate(0deg);
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px dashed var(--primary);
+            border-radius: 15px;
+            opacity: 0.3;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header h1 {
+            font-family: 'Caveat', cursive;
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--primary);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+            transform: rotate(-1deg);
+        }
+        
+        .header p {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-bottom: 20px;
+            font-weight: 400;
+            transform: rotate(0.5deg);
+        }
+        
+        .header-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface-light);
+            padding: 10px 18px;
+            border-radius: 25px;
+            border: 2px solid var(--danger);
+            font-size: 14px;
+            box-shadow: var(--sketch-shadow);
+            transform: rotate(0.5deg);
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+        
+        .status-dot.connected {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .co-display {
+            background: var(--surface-light);
+            padding: 30px 25px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: var(--paper-shadow);
+            border: 3px solid var(--border-light);
+            margin-bottom: 25px;
+            transform: rotate(0.3deg);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .co-display:hover {
+            transform: rotate(0deg) scale(1.02);
+        }
+        
+        .co-display::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 20px;
+            right: 20px;
+            height: 5px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
+            border-radius: 50%;
+            z-index: -1;
+        }
+        
+        .co-label {
+            font-family: 'Caveat', cursive;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary);
+            transform: rotate(-0.5deg);
+        }
+        
+        .co-value {
+            font-family: 'Caveat', cursive;
+            font-size: 4rem;
+            font-weight: 700;
+            margin: 20px 0;
+            line-height: 1;
+            transition: all 0.3s ease;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            transform: rotate(-1deg);
+        }
+        
+        .co-status {
+            font-size: 1.1rem;
+            font-weight: 500;
+            padding: 12px 25px;
+            border-radius: 20px;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            border: 2px solid;
+            transform: rotate(0.5deg);
+        }
+        
+        .co-safe { color: var(--safe); }
+        .co-warning { color: var(--warning); }
+        .co-danger { color: var(--danger); }
+        
+        .status-safe { 
+            background: rgba(46, 204, 113, 0.1); 
+            color: var(--safe); 
+            border-color: var(--safe);
+        }
+        .status-warning { 
+            background: rgba(243, 156, 18, 0.1); 
+            color: var(--warning); 
+            border-color: var(--warning);
+        }
+        .status-danger { 
+            background: rgba(231, 76, 60, 0.1); 
+            color: var(--danger); 
+            border-color: var(--danger);
+        }
+        
+        .chart-container {
+            background: var(--surface-light);
+            padding: 25px 20px;
+            border-radius: 20px;
+            box-shadow: var(--paper-shadow);
+            border: 2px solid var(--border-light);
+            margin-bottom: 25px;
+            transform: rotate(-0.2deg);
+            transition: all 0.3s ease;
+        }
+        
+        .chart-container:hover {
+            transform: rotate(0deg);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .chart-title {
+            font-family: 'Caveat', cursive;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            transform: rotate(-0.5deg);
+        }
+        
+        .chart-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            transform: rotate(0.5deg);
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+            width: 100%;
+            background: rgba(255,255,255,0.5);
+            border-radius: 15px;
+            padding: 10px;
+            border: 1px dashed var(--border-light);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: var(--surface-light);
+            padding: 20px 18px;
+            border-radius: 18px;
+            box-shadow: var(--sketch-shadow);
+            border: 2px solid var(--border-light);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card:nth-child(1) { transform: rotate(-0.5deg); }
+        .stat-card:nth-child(2) { transform: rotate(0.3deg); }
+        .stat-card:nth-child(3) { transform: rotate(-0.2deg); }
+        .stat-card:nth-child(4) { transform: rotate(0.4deg); }
+        
+        .stat-card:hover {
+            transform: rotate(0deg) scale(1.03);
+            box-shadow: var(--paper-shadow);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            border: 1px dotted var(--primary);
+            border-radius: 12px;
+            opacity: 0.3;
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-icon {
+            font-size: 1.5rem;
+            opacity: 0.6;
+        }
+        
+        .stat-value {
+            font-family: 'Caveat', cursive;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+        
+        .btn {
+            background: var(--surface-light);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            font-family: 'Kalam', cursive;
+            transition: all 0.3s ease;
+            box-shadow: var(--sketch-shadow);
+            position: relative;
+            min-width: 160px;
+        }
+        
+        .btn:nth-child(1) { transform: rotate(-1deg); }
+        .btn:nth-child(2) { transform: rotate(0.8deg); }
+        
+        .btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(0deg) scale(1.05);
+            box-shadow: var(--paper-shadow);
+        }
+        
+        .btn:disabled {
+            background: #bdc3c7;
+            color: #7f8c8d;
+            border-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: rotate(0deg);
+        }
+        
+        .btn-secondary {
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .last-update {
+            text-align: center;
+            padding: 18px;
+            background: var(--surface-light);
+            border-radius: 18px;
+            font-size: 0.9rem;
+            border: 2px solid var(--border-light);
+            box-shadow: var(--sketch-shadow);
+            transform: rotate(-0.3deg);
+        }
+        
+        .alert {
+            position: fixed;
+            top: 20px;
+            left: 15px;
+            right: 15px;
+            padding: 18px;
+            border-radius: 15px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateY(-100px);
+            transition: transform 0.4s ease;
+            text-align: center;
+            font-family: 'Kalam', cursive;
+            box-shadow: var(--paper-shadow);
+            border: 3px solid;
+            display: none;
+        }
+        
+        .alert.show {
+            transform: translateY(0) rotate(-1deg);
+        }
+        
+        .alert-danger {
+            background: var(--danger);
+            border-color: #c0392b;
+            animation: wiggle 0.5s ease-in-out;
+        }
+        
+        .alert-warning {
+            background: var(--warning);
+            border-color: #d68910;
+        }
+        
+        @keyframes wiggle {
+            0%, 20%, 40%, 60%, 80%, 100% { transform: translateY(0) rotate(-1deg); }
+            10%, 30%, 50%, 70%, 90% { transform: translateY(-2px) rotate(1deg); }
+        }
+        
+        /* Responsive düzenlemeler */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .co-value {
+                font-size: 3rem;
+            }
+            
+            .chart-wrapper {
+                height: 220px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                min-width: auto;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .header-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .co-display {
+                padding: 25px 20px;
+            }
+            
+            .co-value {
+                font-size: 2.5rem;
+            }
+            
+            .chart-wrapper {
+                height: 200px;
+            }
+            
+            .chart-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .stat-card {
+                padding: 18px 15px;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>🛡️ CO Gas İzleme Sistemi</h1>
+                <p>Evdeki karbonmonoksit seviyesini takip ediyoruz ✨</p>
+                <div class="header-controls">
+                    <div class="status-indicator">
+                        <div id="statusDot" class="status-dot"></div>
+                        <span id="connectionStatus">Veri Bekleniyor</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="co-display">
+            <div class="co-label">Şu Anki CO Seviyesi</div>
+            <div id="currentCO" class="co-value co-safe">-- ppm</div>
+            <div id="coStatus" class="co-status status-safe">Veri bekleniyor...</div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">📊 Gerçek Zamanlı Grafik</h3>
+                <div class="chart-subtitle">Son 10 ölçüm</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="coChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">Cihaz Numarası</div>
+                    <div class="stat-icon">📱</div>
+                </div>
+                <div id="deviceId" class="stat-value">EVİM-001</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">Toplam Ölçüm</div>
+                    <div class="stat-icon">📊</div>
+                </div>
+                <div id="totalReadings" class="stat-value">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">Son 5 Dakika</div>
+                    <div class="stat-icon">⏱️</div>
+                </div>
+                <div id="recentReadings" class="stat-value">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">Son Güncelleme</div>
+                    <div class="stat-icon">🔄</div>
+                </div>
+                <div id="lastUpdate" class="stat-value">--:--</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="refreshData()">
+                🔄 Verileri Yenile
+            </button>
+            <button class="btn btn-secondary" onclick="exportData()">
+                📥 Verileri Kaydet
+            </button>
+        </div>
+        
+        <div class="last-update" id="lastUpdateTime">
+            Son güncelleme: Sistem veri bekleniyor...
+        </div>
+    </div>
+    
+    <div id="alert" class="alert alert-danger">
+        🚨 Dikkat! Yüksek CO seviyesi tespit edildi!
+    </div>
+
+    <script>
+        // Global değişkenler
+        let chart = null;
+        let chartData = [];
+        let totalReadings = 0;
+        let recentReadings = 0;
+        let isConnected = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChart();
+            updateConnectionStatus();
+        });
+
+        function refreshData() {
+            console.log('Veriler yenileniyor...');
+            // Gerçek veri kaynağından veri çekme işlemi buraya gelecek
+            // Örnek: fetchRealData();
+            updateTime();
+        }
+        
+        function exportData() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                readings: chartData,
+                deviceId: document.getElementById('deviceId').textContent,
+                totalReadings: totalReadings,
+                recentReadings: recentReadings
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'co_verileri_' + new Date().toISOString().split('T')[0] + '.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+        
+        // Gerçek veri işleme fonksiyonu - dışarıdan çağrılacak
+        function processNewData(data) {
+            updateDisplay(data);
+            updateChart(data);
+            updateStats();
+            updateTime();
+            checkAlerts(data.co_level);
+            updateConnectionStatus(true);
+        }
+        
+        function updateConnectionStatus(connected = false) {
+            isConnected = connected;
+            const statusDot = document.getElementById('statusDot');
+            const connectionStatus = document.getElementById('connectionStatus');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                connectionStatus.textContent = 'Sistem Aktif';
+                document.querySelector('.status-indicator').style.borderColor = 'var(--success)';
+            } else {
+                statusDot.classList.remove('connected');
+                connectionStatus.textContent = 'Veri Bekleniyor';
+                document.querySelector('.status-indicator').style.borderColor = 'var(--danger)';
+            }
+        }
+        
+        function initializeChart() {
+            const ctx = document.getElementById('coChart');
+            if (!ctx) return;
+            
+            const textColor = '#2c3e50';
+            const gridColor = 'rgba(0, 0, 0, 0.1)';
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CO Seviyesi (ppm)',
+                        data: [],
+                        borderColor: '#4a90e2',
+                        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#4a90e2',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: false 
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: gridColor,
+                                borderDash: [3, 3]
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    size: 11,
+                                    family: 'Kalam'
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor,
+                                borderDash: [3, 3]
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: {
+                                    size: 11,
+                                    family: 'Kalam'
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 750,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+        
+        function updateDisplay(data) {
+            const currentCO = document.getElementById('currentCO');
+            const coStatus = document.getElementById('coStatus');
+            
+            if (currentCO) {
+                currentCO.textContent = data.co_level + ' ppm';
+                currentCO.className = 'co-value ' + getStatusClass(data.co_level);
+            }
+            
+            if (coStatus) {
+                coStatus.textContent = getStatusText(data.co_level);
+                coStatus.className = 'co-status ' + getStatusBackground(data.co_level);
+            }
+        }
+        
+        function updateChart(data) {
+            chartData.push(data);
+            
+            // Son 10 veriyi tut
+            if (chartData.length > 10) {
+                chartData.shift();
+            }
+            
+            chart.data.labels = chartData.map(item => 
+                new Date(item.timestamp).toLocaleTimeString('tr-TR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+            );
+            chart.data.datasets[0].data = chartData.map(item => item.co_level);
+            
+            // Renk değişimi
+            const colors = chartData.map(item => {
+                if (item.co_level > 100) return '#e74c3c';
+                if (item.co_level > 50) return '#f39c12';
+                return '#4a90e2';
+            });
+            
+            chart.data.datasets[0].backgroundColor = colors.map(color =>
+                color.replace('1)', '0.1)')
+            );
+            chart.data.datasets[0].borderColor = colors;
+            chart.data.datasets[0].pointBackgroundColor = colors;
+            
+            chart.update('active');
+        }
+        
+        function updateStats() {
+            totalReadings = chartData.length;
+            recentReadings = chartData.slice(-5).length;
+
+            document.getElementById('totalReadings').textContent = totalReadings;
+            document.getElementById('recentReadings').textContent = recentReadings;
+            document.getElementById('deviceId').textContent = 'EVİM-001';
+        }
+
+        // Son güncelleme zamanını güncelle
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            const lastUpdate = document.getElementById('lastUpdate');
+            if (lastUpdate) {
+                lastUpdate.textContent = timeStr;
+            }
+
+            const lastUpdateTime = document.getElementById('lastUpdateTime');
+            if (lastUpdateTime) {
+                lastUpdateTime.textContent = `Son güncelleme: ${timeStr}`;
+            }
+        }
+
+        // CO seviyesi durumuna göre CSS sınıfı döner
+        function getStatusClass(coLevel) {
+            if (coLevel > 100) return 'co-danger';
+            if (coLevel > 50) return 'co-warning';
+            return 'co-safe';
+        }
+
+        // CO seviyesi durumuna göre arka plan sınıfı döner
+        function getStatusBackground(coLevel) {
+            if (coLevel > 100) return 'status-danger';
+            if (coLevel > 50) return 'status-warning';
+            return 'status-safe';
+        }
+
+        // CO seviyesi durumuna göre açıklama metni döner
+        function getStatusText(coLevel) {
+            if (coLevel > 100) return 'Tehlikeli seviyede! Acil önlem alın!';
+            if (coLevel > 50) return 'Uyarı: Yüksek CO seviyesi.';
+            return 'Güvenli seviyede.';
+        }
+
+        function checkAlerts(coLevel) {
+            const alertBox = document.getElementById('alert');
+            if (!alertBox) return;
+
+            if (coLevel > 100) {
+                alertBox.style.display = 'block';
+                alertBox.classList.add('show');
+            } else {
+                alertBox.style.display = 'none';
+                alertBox.classList.remove('show');
+            }
+        }
+
+        // Dışarıdan veri girişi için örnek fonksiyon
+        // Gerçek sensör verileri geldiğinde bu fonksiyon çağrılacak
+        function injectData(coLevel) {
+            const data = {
+                co_level: coLevel,
+                device_id: 'EVİM-001',
+                timestamp: new Date().toISOString()
+            };
+            processNewData(data);
+        }
+    </script>
+</body>
+</html>
